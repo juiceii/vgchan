@@ -273,7 +273,9 @@ func streamoptions(qw *quicktemplate.Writer, specs []inputSpec, ln lang.Pack) {
 	}
 	for _, s := range specs {
 		w.input(s)
-		w.label(s, nil)
-		w.N().S(`<br>`)
+		if s.Type != _hr {
+			w.label(s, nil)
+			w.N().S(`<br>`)
+		}
 	}
 }
