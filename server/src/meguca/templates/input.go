@@ -26,6 +26,7 @@ const (
 	_image
 	_shortcut
 	_range
+	_hr
 )
 
 // Spec of an option passed into the rendering function
@@ -78,6 +79,8 @@ func (w *formWriter) input(spec inputSpec) {
 		streamrenderMap(&w.Writer, spec)
 	case _array:
 		streamrenderArray(&w.Writer, spec)
+	case _hr:
+		w.N().S("<hr>")
 	case _shortcut:
 		w.N().S("Alt+")
 		cont = true

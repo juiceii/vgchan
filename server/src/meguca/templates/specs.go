@@ -303,6 +303,7 @@ var optionSpecs = [...][]inputSpec{
 	{
 		{ID: "imageHover"},
 		{ID: "webmHover"},
+		{Type: _hr},
 		{
 			ID:   "audioVolume",
 			Type: _range,
