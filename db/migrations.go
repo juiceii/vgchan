@@ -1346,6 +1346,38 @@ var migrations = []func(*sql.Tx) error{
 	func(tx *sql.Tx) (err error) {
 		return registerFunctions(tx, "delete_images", "spoiler_images")
 	},
+	func(tx *sql.Tx) (err error) {
+		_, err = tx.Exec(`alter table posts add column page int`)
+		if err != nil {
+			return
+		}
+
+		byThread := make(map[uint64][]uint64)
+		r, err := sq.Select("id", "op").
+			From("posts").
+			OrderBy("id").
+			Query()
+		if err != nil {
+			return
+		}
+		defer r.Close()
+		var id, op uint64
+		for r.Next() {
+			err = r.Scan(&id, &op)
+			if err != nil {
+				return
+			}
+			byThread[op] = append(byThread[op], id)
+		}
+		err = r.Err()
+		if err != nil {
+			return
+		}
+
+		for op, posts := range byThread {
+
+		}
+	},
 }
 
 func createIndex(table string, columns ...string) string {
