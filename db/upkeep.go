@@ -39,14 +39,14 @@ func runCleanupTasks() {
 }
 
 func runMinuteTasks() {
-	if config.ImagerMode != config.ImagerOnly {
+	if config.Server.ImagerMode != config.ImagerOnly {
 		logError("open post cleanup", closeDanglingPosts())
 		expireRows("image_tokens", "bans", "failed_captchas")
 	}
 }
 
 func runHalfTasks() {
-	if config.ImagerMode != config.ImagerOnly {
+	if config.Server.ImagerMode != config.ImagerOnly {
 		logError("unrestrict pyu_limit", FreePyuLimit())
 		logError("expire spam scores", expireSpamScores())
 		logError("expire last solved captcha times", expireLastSolvedCaptchas())
@@ -54,7 +54,7 @@ func runHalfTasks() {
 }
 
 func runHourTasks() {
-	if config.ImagerMode != config.ImagerOnly {
+	if config.Server.ImagerMode != config.ImagerOnly {
 		expireRows("sessions")
 		expireBy("created < now() at time zone 'utc' + '-7 days'",
 			"mod_log", "reports")
@@ -65,7 +65,7 @@ func runHourTasks() {
 		_, err := db.Exec(`vacuum`)
 		logError("vaccum database", err)
 	}
-	if config.ImagerMode != config.NoImager {
+	if config.Server.ImagerMode != config.NoImager {
 		logError("image cleanup", deleteUnusedImages())
 	}
 }
@@ -180,7 +180,7 @@ func deleteUnusedBoards() error {
 				From("boards").
 				Where(`created < ?
 					and id != 'all'
-					and (select coalesce(max(bumpTime), 0)
+					and (select coalesce(max(bump_time), 0)
 							from threads
 							where board = boards.id
 						) < ?`,
@@ -227,8 +227,8 @@ func deleteBoard(tx *sql.Tx, id, by, reason string) (err error) {
 	return
 }
 
-// Delete stale threads. Thread retention measured in a bumptime threshold, that
-// is calculated as a function of post count till bump limit with an N days
+// Delete stale threads. Thread retention measured in a bump time threshold,
+// that is calculated as a function of post count till bump limit with an N days
 // floor and ceiling.
 func deleteOldThreads() (err error) {
 	conf := config.Get()
@@ -239,23 +239,23 @@ func deleteOldThreads() (err error) {
 	return InTransaction(false, func(tx *sql.Tx) (err error) {
 		// Find threads to delete
 		var (
-			now         = time.Now().Unix()
-			min         = float64(conf.ThreadExpiryMin * 24 * 3600)
-			max         = float64(conf.ThreadExpiryMax * 24 * 3600)
-			toDel       = make([]uint64, 0, 16)
-			id, postCtr uint64
-			bumpTime    int64
-			deleted     sql.NullBool
+			now           = time.Now().Unix()
+			min           = float64(conf.ThreadExpiryMin * 24 * 3600)
+			max           = float64(conf.ThreadExpiryMax * 24 * 3600)
+			toDel         = make([]uint64, 0, 16)
+			id, postCount uint64
+			bumpTime      int64
+			deleted       sql.NullBool
 		)
 		err = queryAll(
 			sq.
 				Select(
 					"threads.id",
-					"bumpTime",
+					"bump_time",
 					`(select count(*)
 						from posts
 						where posts.op = threads.id
-						) as postCtr`,
+						) as post_count`,
 					fmt.Sprintf(
 						`(select exists (
 							select 1 from post_moderation
@@ -266,12 +266,13 @@ func deleteOldThreads() (err error) {
 				Join("posts on threads.id = posts.id").
 				RunWith(tx),
 			func(r *sql.Rows) (err error) {
-				err = r.Scan(&id, &bumpTime, &postCtr, &deleted)
+				err = r.Scan(&id, &bumpTime, &postCount, &deleted)
 				if err != nil {
 					return
 				}
 				threshold := min +
-					(-max+min)*math.Pow(float64(postCtr)/common.BumpLimit-1, 3)
+					(-max+min)*
+						math.Pow(float64(postCount)/common.BumpLimit-1, 3)
 				if deleted.Bool {
 					threshold /= 3
 				}

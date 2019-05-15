@@ -1,15 +1,19 @@
 package db
 
 import (
+	"testing"
+	"time"
+
 	"github.com/bakape/meguca/auth"
 	"github.com/bakape/meguca/common"
 	"github.com/bakape/meguca/config"
 	"github.com/bakape/meguca/test"
-	"testing"
-	"time"
 )
 
 func TestCaptchas(t *testing.T) {
+	// Skip to avoid massive booru fetches on DB population
+	test.SkipInCI(t)
+
 	assertTableClear(t, "failed_captchas", "last_solved_captchas", "boards",
 		"accounts", "spam_scores")
 	writeAllBoard(t)
@@ -56,14 +60,14 @@ func TestCaptchas(t *testing.T) {
 		c := cases[i]
 		t.Run(c.name, func(t *testing.T) {
 			err = ValidateCaptcha(c.captcha, ip)
-			test.AssertDeepEquals(t, err, c.err)
+			test.AssertEquals(t, err, c.err)
 
 			for _, dur := range [...]time.Duration{time.Hour, time.Minute} {
 				has, err := SolvedCaptchaRecently(ip, dur)
 				if err != nil {
 					t.Fatal(err)
 				}
-				test.AssertDeepEquals(t, has, c.hasSolved)
+				test.AssertEquals(t, has, c.hasSolved)
 			}
 		})
 	}

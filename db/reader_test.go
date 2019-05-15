@@ -47,16 +47,16 @@ func prepareThreads(t *testing.T) {
 
 	threads := [...]Thread{
 		{
-			ID:        1,
-			Board:     "a",
-			ReplyTime: 1,
-			BumpTime:  1,
+			ID:         1,
+			Board:      "a",
+			UpdateTime: 1,
+			BumpTime:   1,
 		},
 		{
-			ID:        3,
-			Board:     "c",
-			ReplyTime: 3,
-			BumpTime:  5,
+			ID:         3,
+			Board:      "c",
+			UpdateTime: 3,
+			BumpTime:   5,
 		},
 	}
 	posts := [...]Post{
@@ -195,7 +195,7 @@ func testGetPost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	AssertDeepEquals(t, post, std)
+	AssertEquals(t, post, std)
 }
 
 func testGetAllBoard(t *testing.T) {
@@ -219,10 +219,10 @@ func testGetAllBoard(t *testing.T) {
 					},
 				},
 			},
-			PostCtr:   1,
-			Board:     "c",
-			ReplyTime: 3,
-			BumpTime:  5,
+			PostCount:  1,
+			Board:      "c",
+			UpdateTime: 3,
+			BumpTime:   5,
 		},
 		1: {
 			Post: common.Post{
@@ -231,11 +231,11 @@ func testGetAllBoard(t *testing.T) {
 				Moderated:  true,
 				Moderation: []common.ModerationEntry{sampleModerationEntry},
 			},
-			PostCtr:   3,
-			ImageCtr:  1,
-			Board:     "a",
-			ReplyTime: 1,
-			BumpTime:  1,
+			PostCount:  3,
+			ImageCount: 1,
+			Board:      "a",
+			UpdateTime: 1,
+			BumpTime:   1,
 		},
 	}
 
@@ -251,7 +251,7 @@ func testGetAllBoard(t *testing.T) {
 
 			assertImage(t, thread, std.Image)
 			syncThreadVariables(thread, std)
-			AssertDeepEquals(t, thread, &std)
+			AssertEquals(t, thread, &std)
 		})
 	}
 }
@@ -264,7 +264,7 @@ func assertImage(t *testing.T, thread *common.Thread, std *common.Image) {
 		if thread.Image == nil {
 			t.Fatalf("no image on thread %d", thread.ID)
 		}
-		AssertDeepEquals(t, *thread.Image, *std)
+		AssertEquals(t, *thread.Image, *std)
 		thread.Image = std
 	}
 }
@@ -297,10 +297,10 @@ func testGetBoard(t *testing.T) {
 							},
 						},
 					},
-					PostCtr:   1,
-					Board:     "c",
-					ReplyTime: 3,
-					BumpTime:  5,
+					PostCount:  1,
+					Board:      "c",
+					UpdateTime: 3,
+					BumpTime:   5,
 				},
 			},
 		},
@@ -326,7 +326,7 @@ func testGetBoard(t *testing.T) {
 			for i := range board.Threads {
 				syncThreadVariables(&board.Threads[i], c.std[i])
 			}
-			AssertDeepEquals(t, board.Threads, c.std)
+			AssertEquals(t, board.Threads, c.std)
 		})
 	}
 }
@@ -335,7 +335,7 @@ func testGetBoard(t *testing.T) {
 // tested
 func syncThreadVariables(dst *common.Thread, src common.Thread) {
 	dst.ID = src.ID
-	dst.ReplyTime = src.ReplyTime
+	dst.UpdateTime = src.UpdateTime
 	dst.Time = src.Time
 	dst.BumpTime = src.BumpTime
 }
@@ -344,11 +344,11 @@ func testGetThread(t *testing.T) {
 	t.Parallel()
 
 	thread1 := common.Thread{
-		PostCtr:   3,
-		ImageCtr:  1,
-		ReplyTime: 1,
-		BumpTime:  1,
-		Board:     "a",
+		PostCount:  3,
+		ImageCount: 1,
+		UpdateTime: 1,
+		BumpTime:   1,
+		Board:      "a",
 		Post: common.Post{
 			ID:         1,
 			Image:      &assets.StdJPEG,
@@ -391,10 +391,10 @@ func testGetThread(t *testing.T) {
 			name: "no replies ;_;",
 			id:   3,
 			std: common.Thread{
-				Board:     "c",
-				ReplyTime: 3,
-				BumpTime:  5,
-				PostCtr:   1,
+				Board:      "c",
+				UpdateTime: 3,
+				BumpTime:   5,
+				PostCount:  1,
 				Post: common.Post{
 					ID: 3,
 					Links: []common.Link{
@@ -432,7 +432,7 @@ func testGetThread(t *testing.T) {
 			}
 			assertImage(t, &thread, c.std.Image)
 			syncThreadVariables(&thread, c.std)
-			AssertDeepEquals(t, thread, c.std)
+			AssertEquals(t, thread, c.std)
 		})
 	}
 }

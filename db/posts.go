@@ -43,7 +43,7 @@ func getCounter(q squirrel.SelectBuilder) (uint64, error) {
 
 // BoardCounter retrieves the progress counter of a board
 func BoardCounter(board string) (uint64, error) {
-	q := sq.Select("max(replyTime) + count(*)").
+	q := sq.Select("max(update_time) + count(*)").
 		From("threads").
 		Where("board = ?", board)
 	return getCounter(q)
@@ -51,7 +51,7 @@ func BoardCounter(board string) (uint64, error) {
 
 // AllBoardCounter retrieves the progress counter of the /all/ board
 func AllBoardCounter() (uint64, error) {
-	q := sq.Select("max(replyTime) + count(*)").
+	q := sq.Select("max(update_time) + count(*)").
 		From("threads")
 	return getCounter(q)
 }
@@ -108,15 +108,17 @@ func WritePost(tx *sql.Tx, p Post) (err error) {
 // Thread OPs must have their post ID set to the thread ID.
 // Any images are to be inserted in a separate call.
 func InsertPost(tx *sql.Tx, p *Post) (err error) {
-	args := make([]interface{}, 0, 16)
+	args := make([]interface{}, 0, 12)
 	args = append(args,
 		p.Editing, p.Board, p.OP, p.Body, p.Flag,
-		p.Name, p.Trip, p.Auth, p.Password, p.IP)
+		p.Name, p.Trip, p.Auth, p.Sage,
+		p.Password, p.IP)
 
 	q := sq.Insert("posts").
 		Columns(
 			"editing", "board", "op", "body", "flag",
-			"name", "trip", "auth", "password", "ip",
+			"name", "trip", "auth", "sage",
+			"password", "ip",
 		)
 
 	if p.ID != 0 { // OP of a thread
@@ -137,8 +139,8 @@ func InsertPost(tx *sql.Tx, p *Post) (err error) {
 	if p.Moderated {
 		// Read moderation log, if post deleted on insert
 		//
-		// TODO: Get this in db-side JSON in same query, once we have db-side post
-		// JSON generation.
+		// TODO: Get this in db-side JSON in same query, once we have db-side
+		// post JSON generation.
 		arr := [...]*common.Post{&p.Post}
 		err = injectModeration(arr[:], tx)
 		if err != nil {

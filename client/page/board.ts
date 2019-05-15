@@ -12,11 +12,11 @@ type SortFunction = (a: Post, b: Post) => number
 
 // Thread sort functions
 const sorts: { [name: string]: SortFunction } = {
-	bump: subtract("bumpTime"),
-	lastReply: subtract("replyTime"),
+	bump: subtract("bump_time"),
+	lastReply: subtract("update_time"),
 	creation: subtract("time"),
-	replyCount: subtract("postCtr"),
-	fileCount: subtract("imageCtr"),
+	replyCount: subtract("post_count"),
+	fileCount: subtract("image_count"),
 }
 const threadsEl = document.getElementById("threads")
 

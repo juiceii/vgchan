@@ -5,28 +5,12 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/bakape/meguca/util"
 	"reflect"
 	"sort"
 	"sync"
+
+	"github.com/bakape/meguca/util"
 )
-
-// ImagerModeType is the imager functionality setting for this meguca process
-type ImagerModeType int
-
-const (
-	// IntegratedImager is regular and imager functionality both handled by this process
-	IntegratedImager ImagerModeType = iota
-
-	// NoImager is imager functionality not handled by this process
-	NoImager
-
-	// ImagerOnly is only imager functionality handled by this process
-	ImagerOnly
-)
-
-// ImagerMode is imager functionality setting for this meguca process
-var ImagerMode ImagerModeType
 
 var (
 	// Ensures no reads happen, while the configuration is reloading
@@ -80,8 +64,8 @@ var (
 		FeedbackEmail:     "admin@email.com",
 		RootURL:           "http://localhost",
 		FAQ:               defaultFAQ,
-		CaptchaTags: []string{"patchouli_knowledge", "cirno", "hakurei_reimu",
-			"kirisame_marisa", "konpaku_youmu"},
+		CaptchaTags: []string{"patchouli_knowledge", "cirno",
+			"hakurei_reimu"},
 		OverrideCaptchaTags: map[string]string{},
 		Public: Public{
 			DefaultCSS:      "moe",

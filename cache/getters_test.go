@@ -1,13 +1,16 @@
 package cache
 
 import (
-	. "github.com/bakape/meguca/test"
 	"testing"
 	"time"
+
+	"github.com/bakape/meguca/config"
+	. "github.com/bakape/meguca/test"
 )
 
 func TestGetJSON(t *testing.T) {
 	Clear()
+	config.Server.CacheSize = 128 * (1 << 20)
 
 	var fetches, counterChecks int
 	key := ThreadKey(33, 3)
@@ -33,8 +36,8 @@ func TestGetJSON(t *testing.T) {
 		if err := err; err != nil {
 			t.Fatal(err)
 		}
-		AssertDeepEquals(t, string(json), `"foo"`)
-		AssertDeepEquals(t, ctr, uint64(1))
+		AssertEquals(t, string(json), `"foo"`)
+		AssertEquals(t, ctr, uint64(1))
 	}
 	assertCount(t, "fetched", 1, fetches)
 	assertCount(t, "counter checked", 1, counterChecks)
@@ -49,6 +52,7 @@ func assertCount(t *testing.T, action string, std, n int) {
 
 func TestGetHTML(t *testing.T) {
 	Clear()
+	config.Server.CacheSize = 128 * (1 << 20)
 
 	var fetches, renders int
 	f := FrontEnd{
@@ -70,8 +74,8 @@ func TestGetHTML(t *testing.T) {
 		if err := err; err != nil {
 			t.Fatal(err)
 		}
-		AssertDeepEquals(t, string(json), `bar`)
-		AssertDeepEquals(t, ctr, uint64(1))
+		AssertEquals(t, string(json), `bar`)
+		AssertEquals(t, ctr, uint64(1))
 	}
 	assertCount(t, "fetched", 1, fetches)
 	assertCount(t, "rendered", 1, fetches)
@@ -93,6 +97,7 @@ func TestGetHTML(t *testing.T) {
 
 func TestCounterExpiry(t *testing.T) {
 	Clear()
+	config.Server.CacheSize = 128 * (1 << 20)
 
 	var counterChecks, fetches int
 	f := FrontEnd{

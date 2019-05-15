@@ -35,7 +35,7 @@ const (
 		where t.id = posts.op
 			and posts.SHA1 is not null
 	),
-	t.replyTime, t.bumpTime, t.subject, t.locked, ` + postSelectsSQL
+	t.update_time, t.bump_time, t.subject, t.locked, ` + postSelectsSQL
 
 	getOPSQL = `
 	select ` + threadSelectsSQL + `
@@ -158,7 +158,7 @@ func GetThread(id uint64, lastN int) (t common.Thread, err error) {
 			cap = lastN
 			limit = &lastN
 		} else {
-			cap = int(t.PostCtr)
+			cap = int(t.PostCount)
 		}
 		r, err := tx.Query(getThreadPostsSQL, id, limit)
 		if err != nil {
@@ -221,8 +221,8 @@ func scanOP(r rowScanner) (t common.Thread, err error) {
 		args  = make([]interface{}, 0, 8+len(pArgs)+len(iArgs))
 	)
 	args = append(args,
-		&t.Sticky, &t.Board, &t.PostCtr, &t.ImageCtr, &t.ReplyTime, &t.BumpTime,
-		&t.Subject, &t.Locked,
+		&t.Sticky, &t.Board, &t.PostCount, &t.ImageCount, &t.UpdateTime,
+		&t.BumpTime, &t.Subject, &t.Locked,
 	)
 	args = append(args, pArgs...)
 	args = append(args, iArgs...)
@@ -307,7 +307,7 @@ func getOPs() squirrel.SelectBuilder {
 func GetBoardCatalog(board string) (b common.Board, err error) {
 	b, err = scanCatalog(getOPs().
 		Where("t.board = ?", board).
-		OrderBy("sticky desc, bumpTime desc"))
+		OrderBy("sticky desc, bump_time desc"))
 	return
 }
 
@@ -316,12 +316,12 @@ func GetThreadIDs(board string) ([]uint64, error) {
 	return scanThreadIDs(sq.Select("id").
 		From("threads").
 		Where("board = ?", board).
-		OrderBy("sticky desc, bumpTime desc"))
+		OrderBy("sticky desc, bump_time desc"))
 }
 
 // GetAllBoardCatalog retrieves all threads for the "/all/" meta-board
 func GetAllBoardCatalog() (board common.Board, err error) {
-	board, err = scanCatalog(getOPs().OrderBy("bumpTime desc"))
+	board, err = scanCatalog(getOPs().OrderBy("bump_time desc"))
 	if err != nil {
 		return
 	}
@@ -345,7 +345,7 @@ func GetAllBoardCatalog() (board common.Board, err error) {
 func GetAllThreadsIDs() ([]uint64, error) {
 	return scanThreadIDs(sq.Select("id").
 		From("threads").
-		OrderBy("bumpTime desc"))
+		OrderBy("bump_time desc"))
 }
 
 func scanCatalog(q squirrel.SelectBuilder) (board common.Board, err error) {
@@ -403,25 +403,6 @@ func filterModerated(moderated *[]*common.Post, p *common.Post) {
 	if p.Moderated {
 		*moderated = append(*moderated, p)
 	}
-}
-
-// Inject open post bodies from the embedded database into the posts
-func injectOpenBodies(posts []*common.Post) error {
-	if len(posts) == 0 {
-		return nil
-	}
-
-	tx, err := boltDB.Begin(false)
-	if err != nil {
-		return err
-	}
-
-	buc := tx.Bucket([]byte("open_bodies"))
-	for _, p := range posts {
-		p.Body = string(buc.Get(encodeUint64Heap(p.ID)))
-	}
-
-	return tx.Rollback()
 }
 
 // Inject moderation information into affected post structs.

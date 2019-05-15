@@ -84,6 +84,8 @@ export const specs: { [id: string]: OptionSpec } = {
 	},
 	// Anonymise all poster names
 	anonymise: {},
+	// Hide all deleted posts
+	hideBinned: {},
 	// Hide posts that linked to a hidden post
 	hideRecursively: {},
 	// Expand post links inline
@@ -202,6 +204,9 @@ export const specs: { [id: string]: OptionSpec } = {
 	google: {
 		default: true,
 		exec: toggleImageSearch("google"),
+	},
+	yandex: {
+		exec: toggleImageSearch("yandex"),
 	},
 	iqdb: {
 		exec: toggleImageSearch("iqdb"),

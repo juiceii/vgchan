@@ -58,10 +58,15 @@ func queryAll(q squirrel.SelectBuilder, fn func(r *sql.Rows) error,
 
 // IsConflictError returns if an error is a unique key conflict error
 func IsConflictError(err error) bool {
-	if err, ok := err.(*pq.Error); ok && err.Code.Name() == "unique_violation" {
-		return true
+	return pqErrorCode(err) == "unique_violation"
+}
+
+// Extract error code, if error is a *pq.Error
+func pqErrorCode(err error) string {
+	if err, ok := err.(*pq.Error); ok {
+		return err.Code.Name()
 	}
-	return false
+	return ""
 }
 
 // Listen assigns a function to listen to Postgres notifications on a channel.
@@ -78,7 +83,7 @@ func ListenCancelable(event string, canceller <-chan struct{},
 	fn func(msg string) error,
 ) (err error) {
 	l := pq.NewListener(
-		ConnArgs,
+		connectionURL,
 		time.Second,
 		time.Second*10,
 		func(_ pq.ListenerEventType, _ error) {},
@@ -121,26 +126,6 @@ func execAll(tx *sql.Tx, q ...string) error {
 		}
 	}
 	return nil
-}
-
-// GetGeoMD5 retrieves the GeoIP MD5 hash
-func GetGeoMD5() (hash string, err error) {
-	err = sq.Select("val::char(32)").
-		From("main").
-		Where("id = 'geo_md5'").
-		Scan(&hash)
-
-	return
-}
-
-// SetGeoMD5 sets the GeoIP MD5 hash
-func SetGeoMD5(hash string) error {
-	_, err := sq.Update("main").
-		Set("val", hash).
-		Where("id = 'geo_md5'").
-		Exec()
-
-	return err
 }
 
 // PostgreSQL notification message parse error

@@ -9,11 +9,13 @@ import { postSM, postState } from "../posts"
 const counters = document.getElementById("thread-post-counters");
 const threads = document.getElementById("threads");
 
-let imgCtr = 0,
-    bumpTime = 0,
+const bumpLimit = 1000;
+
+let image_count = 0,
+    bump_time = 0,
     isDeleted = false
 
-export let postCount = 0;
+export let post_count = 0;
 export let subject = "";
 
 // Render the HTML of a thread page
@@ -25,10 +27,10 @@ export default function () {
 
     data.posts = null
 
-    postCount = data.postCtr;
+    post_count = data.post_count;
     subject = data.subject;
-    imgCtr = data.imageCtr
-    bumpTime = data.bumpTime
+    image_count = data.image_count
+    bump_time = data.bump_time
     if (data.moderation) {
         for (let { type } of data.moderation) {
             if (type === ModerationAction.banPost) {
@@ -57,29 +59,29 @@ export default function () {
 // Increment thread post counters and rerender the indicator in the banner
 export function incrementPostCount(post: boolean, hasImage: boolean) {
     if (post) {
-        postCount++
-        if (postCount < 5000) {
+        post_count++
+        if (post_count < bumpLimit) {
             // An estimate, but good enough
-            bumpTime = Math.floor(Date.now() / 1000)
+            bump_time = Math.floor(Date.now() / 1000)
         }
     }
     if (hasImage) {
-        imgCtr++
+        image_count++
     }
     renderPostCounter()
 }
 
 function renderPostCounter() {
     let text = ""
-    if (postCount) {
-        text = `${postCount} / ${imgCtr}`
+    if (post_count) {
+        text = `${post_count} / ${image_count}`
 
         // Calculate estimated thread expiry time
         if (config.pruneThreads) {
             // Calculate expiry age
             const min = config.threadExpiryMin,
                 max = config.threadExpiryMax
-            let days = min + (-max + min) * (postCount / 5000 - 1) ** 3
+            let days = min + (-max + min) * (post_count / bumpLimit - 1) ** 3
             if (isDeleted) {
                 days /= 3
             }
@@ -88,13 +90,13 @@ function renderPostCounter() {
             }
 
             // Subtract current bump time
-            days -= (Date.now() / 1000 - bumpTime) / (3600 * 24)
+            days -= (Date.now() / 1000 - bump_time) / (3600 * 24)
 
             text += ` / `
             if (days > 1) {
                 text += `${Math.round(days)}d`
             } else {
-                text += `${Math.round(days / 24)}h`
+                text += `${Math.round(days * 24)}h`
             }
         }
     }

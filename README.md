@@ -9,16 +9,18 @@ Platforms: Linux, OSX, Win64
 License: GNU AGPL
 
 ## Runtime dependencies
+
 * [PostgresSQL](https://www.postgresql.org/download/) >= 10.0
 
-### Country flags
-
-To enable poster country flags on posts please download GeoLite2-Country.mmdb from https://www.maxmind.com and place it inside meguca's root directory. Country lookup will become available after a server restart.
-
 ## Building from source
+
+### Native installation.
+
+For installing meguca directly onto a server follow the steps bellow.
 A reference list of commands can be found in `./docs/installation.md`
 
-### Build dependencies
+#### Build dependencies
+
 * [Go](https://golang.org/doc/install) >=1.11 (for building server)
 * [Node.js](https://nodejs.org) >=5.0 (for building client)
 * C11 compiler
@@ -34,12 +36,15 @@ compiled with:
     * libx264
     * libmp3lame
 * OpenCV >= 2
+* libgeoip
 * git
 
-### Linux and OSX
+#### Linux and OSX
+
 * Run `make`
 
-### Windows
+#### Windows
+
 * Install [MSYS2](https://sourceforge.net/projects/msys2/)
 * Open MSYS2 shell
 * Install dependencies listed above with the `mingw-w64-x86_64-` prefix with
@@ -47,21 +52,44 @@ pacman
 * Navigate to the meguca root directory
 * Run `make`
 
+### Docker
+
+Meguca can be deployed in a self-contained Docker container. Install [Docker](https://www.docker.com/)
+and run
+```
+docker build -t meguca .
+docker run -t -p 8000:8000 meguca
+```
+
 ## Setup
-* See `./meguca help` for server operation
+
+### Deployment
+
+meguca can be started in debug mode simply with `./meguca`.
+Configurations are split between meguca instance configurations
+and server instance configurations, which are required to start
+the server and connect to the database.
+The meguca instance configurations are stored in the database, but
+server instance configurations are optionally loaded from a `config.json`
+file on server start.
+A sample configuration file can be found under `docs/config.json`.
+Documentation for this file is available under `docs/config.jsonc`.
+
+It is recommended to serve meguca behind a reverse proxy like NGINX or Apache
+with properly configured TLS settings. A sample NGINX configuration file can be
+found in `docs/`.
+
+### Initial instance configuration
+
 * Login into the "admin" account via the infinity symbol in the top banner with
 the password "password"
 * Change the default password
 * Create a board from the administration panel
 * Configure server from the administration panel
-* To enable country flags on posts download and place `GeoLite2-Country.mmdb`
-into the root directory
-* To avoid having to always type in CLI flags on server start you can specify them in `config.json` file in the project root. A sample file with all the default settings can be found in `docs/`.
 
 ## Development
 
 * See `./docs` for more documentation
-* `./meguca` or `./meguca debug` run the server in development mode
 * `make server` and `make client` build the server and client separately
 * `make watch` watches the file system for changes and incrementally rebuilds
 the client
@@ -70,12 +98,3 @@ the client
 detection and Dockerized test suites, respectively
 * To run server unit tests (unless Dockerized) add database creation rights to
 your PostgreSQL role
-
-### C++ client
-For developing the new C++ client
-
-* Run `git submodule update --init --recursive`
-* Install [Emscripten](http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html)
-* Ensure Emscripten environment variables by running `source emsdk_env.sh` in your shell
-* Use `DEBUG=1 make wasm` and `make wasm_clean` to compile the C++ client and clean build directories
-* To use the C++ client for meguca add the `?wasm=true` query string to the end of the URL

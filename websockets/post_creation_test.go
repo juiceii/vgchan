@@ -2,15 +2,16 @@ package websockets
 
 import (
 	"database/sql"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/bakape/meguca/common"
 	"github.com/bakape/meguca/config"
 	"github.com/bakape/meguca/db"
 	. "github.com/bakape/meguca/test"
 	"github.com/bakape/meguca/test/test_db"
 	"github.com/bakape/meguca/websockets/feeds"
-	"strconv"
-	"testing"
-	"time"
 )
 
 var (
@@ -81,7 +82,7 @@ func TestInsertThread(t *testing.T) {
 				Board: c.board,
 			}
 			_, err := CreateThread(req, "")
-			AssertDeepEquals(t, c.err, err)
+			AssertEquals(t, c.err, err)
 		})
 	}
 
@@ -101,10 +102,10 @@ func testCreateThread(t *testing.T) {
 	}
 
 	std := common.Thread{
-		Board:    "c",
-		Subject:  "subject",
-		ImageCtr: 1,
-		PostCtr:  1,
+		Board:      "c",
+		Subject:    "subject",
+		ImageCount: 1,
+		PostCount:  1,
 		Post: common.Post{
 			Name: "name",
 			Image: &common.Image{
@@ -141,16 +142,16 @@ func testCreateThread(t *testing.T) {
 	}
 
 	// Pointers have to be dereferenced to be asserted
-	AssertDeepEquals(t, *thread.Image, *std.Image)
+	AssertEquals(t, *thread.Image, *std.Image)
 
 	// Normalize timestamps and pointer fields
-	then := thread.ReplyTime
-	std.ReplyTime = then
+	then := thread.UpdateTime
+	std.UpdateTime = then
 	std.BumpTime = then
 	std.Time = then
 	std.Image = thread.Image
 
-	AssertDeepEquals(t, thread, std)
+	AssertEquals(t, thread, std)
 }
 
 func testCreateThreadTextOnly(t *testing.T) {
@@ -200,7 +201,7 @@ func assertIP(t *testing.T, id uint64, ip string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	AssertDeepEquals(t, res, ip)
+	AssertEquals(t, res, ip)
 }
 
 func TestClosePreviousPostOnCreation(t *testing.T) {
@@ -332,10 +333,10 @@ func TestPostCreation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	AssertDeepEquals(t, *post.Image, *stdPost.Image)
+	AssertEquals(t, *post.Image, *stdPost.Image)
 	stdPost.Image = post.Image
 	stdPost.Time = post.Time
-	AssertDeepEquals(t, post, stdPost)
+	AssertEquals(t, post, stdPost)
 
 	assertIP(t, 6, "::1")
 
@@ -343,10 +344,10 @@ func TestPostCreation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	AssertDeepEquals(t, thread.PostCtr, uint32(2))
-	AssertDeepEquals(t, thread.ImageCtr, uint32(1))
+	AssertEquals(t, thread.PostCount, uint32(2))
+	AssertEquals(t, thread.ImageCount, uint32(1))
 
-	AssertDeepEquals(t, cl.post, openPost{
+	AssertEquals(t, cl.post, openPost{
 		id:          6,
 		op:          1,
 		time:        stdPost.Time,

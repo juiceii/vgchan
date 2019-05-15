@@ -2,12 +2,14 @@ package auth
 
 import (
 	"encoding/json"
-	"github.com/bakape/meguca/config"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 
 	"github.com/bakape/captchouli"
+	captchouli_common "github.com/bakape/captchouli/common"
+	"github.com/bakape/meguca/common"
+	"github.com/bakape/meguca/config"
 )
 
 var (
@@ -109,13 +111,14 @@ func CaptchaService(board string) *captchouli.Service {
 // This function blocks until all services are initialized.
 func LoadCaptchaServices() (err error) {
 	conf := config.Get()
-	if !conf.Captcha || config.ImagerMode == config.NoImager {
+	if !conf.Captcha || config.Server.ImagerMode == config.NoImager {
 		return
 	}
 
 	openMu.Lock()
 	defer openMu.Unlock()
 	if !open {
+		captchouli_common.IsTest = common.IsTest
 		err = captchouli.Open()
 		if err != nil {
 			return

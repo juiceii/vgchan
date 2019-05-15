@@ -152,6 +152,10 @@
 			"Hidden: 0",
 			"Clear hidden posts"
 		],
+		"hideBinned": [
+			"Hide Deleted Posts",
+			"Hide all posts that have been deleted"
+		],
 		"hideNSFW": [
 			"Hide NSFW on /all/",
 			"Hide boards tagged as not safe for work from the /all/ metaboard"
@@ -403,6 +407,10 @@
 		"whatAnime": [
 			"WhatAnime",
 			"whatanime.ga anime screenshot search"
+		],
+		"yandex": [
+			"Yandex",
+			"Yandex image search"
 		],
 		"workMode": [
 			"Work mode",

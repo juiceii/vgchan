@@ -5,17 +5,20 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/bakape/meguca/config"
-	"github.com/bakape/meguca/test"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/bakape/captchouli"
+	"github.com/bakape/meguca/config"
+	"github.com/bakape/meguca/test"
 )
 
 func TestCaptchaService(t *testing.T) {
+	// Skip to avoid massive booru fetches on DB population
+	test.SkipInCI(t)
+
 	config.Set(config.Configs{
 		CaptchaTags: config.Defaults.CaptchaTags,
 		OverrideCaptchaTags: map[string]string{
@@ -60,7 +63,7 @@ func TestDecodeCaptcha(t *testing.T) {
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	var c Captcha
 	c.FromRequest(r)
-	test.AssertDeepEquals(t, c, std)
+	test.AssertEquals(t, c, std)
 
 	src, err := json.Marshal(std)
 	if err != nil {
@@ -70,5 +73,5 @@ func TestDecodeCaptcha(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	test.AssertDeepEquals(t, c, std)
+	test.AssertEquals(t, c, std)
 }

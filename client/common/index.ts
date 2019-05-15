@@ -94,10 +94,10 @@ export interface Command {
 
 // Data of an OP post
 export interface ThreadData extends PostData {
-	postCtr: number
-	imageCtr: number
-	replyTime: number
-	bumpTime: number
+	post_count: number
+	image_count: number
+	update_time: number
+	bump_time: number
 	subject: string
 	board: string
 	posts?: PostData[]

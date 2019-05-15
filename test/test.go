@@ -19,9 +19,9 @@ func LogUnexpected(t *testing.T, expected, got interface{}) {
 	t.Fatalf("\nexpected: %#v\ngot:      %#v", expected, got)
 }
 
-// AssertDeepEquals asserts two values are deeply equal or fails the test, if
+// AssertEquals asserts two values are deeply equal or fails the test, if
 // not
-func AssertDeepEquals(t *testing.T, res, std interface{}) {
+func AssertEquals(t *testing.T, res, std interface{}) {
 	t.Helper()
 	if !reflect.DeepEqual(res, std) {
 		LogUnexpected(t, std, res)
@@ -85,4 +85,12 @@ func OpenSample(t *testing.T, name string) *os.File {
 		t.Fatal(err)
 	}
 	return f
+}
+
+// Skip this test, if run in a CI environment
+func SkipInCI(t *testing.T) {
+	t.Helper()
+	if os.Getenv("CI") == "true" {
+		t.Skip()
+	}
 }

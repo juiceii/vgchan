@@ -25,13 +25,6 @@ var migrations = []func(*sql.Tx) error{
 	func(tx *sql.Tx) (err error) {
 		// Initialize DB
 		err = execAll(tx,
-			`create table main (
-				id text primary key,
-				val text not null
-			)`,
-			`insert into main (id, val) values
-				('version', '0'),
-				('pyu', '0')`,
 			`create table accounts (
 				id varchar(20) primary key,
 				password bytea not null
@@ -1086,12 +1079,6 @@ var migrations = []func(*sql.Tx) error{
 			return
 		}
 
-		err = registerTriggers(tx, false, map[string][]string{
-			"boards":  {"insert", "update", "delete"},
-			"mod_log": {"insert"},
-			"posts":   {"insert", "update"},
-			"threads": {"insert", "update", "delete"},
-		})
 		return
 	},
 	func(tx *sql.Tx) (err error) {
@@ -1270,13 +1257,6 @@ var migrations = []func(*sql.Tx) error{
 			return
 		}
 
-		// Make it execute before insert instead
-		err = registerTriggers(tx, true, map[string][]string{
-			"posts": {"insert"},
-		})
-		if err != nil {
-			return
-		}
 		// Enables the above by avoiding constraint violation
 		_, err = tx.Exec(
 			`alter table post_moderation
@@ -1347,6 +1327,116 @@ var migrations = []func(*sql.Tx) error{
 		return registerFunctions(tx, "delete_images", "spoiler_images")
 	},
 	func(tx *sql.Tx) (err error) {
+		for _, args := range [...]string{
+			`bigint, boolean, boolean, boolean`,
+			`bigint, character varying, boolean, boolean`,
+			`bigint, character varying, bytea, boolean, boolean`,
+			`bigint, boolean, boolean`,
+			`bigint, boolean`,
+		} {
+			err = dropFunctions(tx, fmt.Sprintf("bump_thread(%s)", args))
+			if err != nil {
+				return
+			}
+		}
+		return registerFunctions(tx, "bump_thread")
+	},
+	func(tx *sql.Tx) (err error) {
+		// Make trigger naming conform to their execution times
+
+		// Drop old trigger functions and their triggers
+		for _, s := range [...]string{
+			"boards_insert", "boards_update", "boards_delete",
+			"mod_log_insert",
+			"posts_insert", "posts_update",
+			"threads_insert", "threads_update", "threads_delete",
+		} {
+			err = dropFunctions(tx, "on_"+s)
+			if err != nil {
+				return
+			}
+		}
+
+		// Register the new triggers
+		return registerTriggers(tx, map[string][]triggerDescriptor{
+			"boards": {
+				{after, tableInsert},
+				{after, tableUpdate},
+				{after, tableDelete},
+			},
+			"mod_log": {{after, tableInsert}},
+			"posts":   {{before, tableInsert}, {after, tableUpdate}},
+			"threads": {
+				{after, tableInsert},
+				{after, tableUpdate},
+				{after, tableDelete},
+			},
+		})
+	},
+	func(tx *sql.Tx) (err error) {
+		return execAll(tx,
+			`alter table boards alter column id type varchar(10)`,
+			`alter table boards alter column defaultcss type varchar(20)`,
+
+			`alter table banners alter column board type varchar(10)`,
+
+			`alter table bans alter column board type varchar(10)`,
+			`alter table bans alter column reason type varchar(100)`,
+
+			`alter table loading_animations alter column board type varchar(10)`,
+
+			`alter table mod_log alter column board type varchar(10)`,
+			`alter table mod_log alter column board type varchar(100)`,
+
+			`alter table post_moderation alter column by type varchar(20)`,
+			`alter table post_moderation alter column data type varchar(100)`,
+
+			`alter table posts alter column board type varchar(10)`,
+			`alter table posts alter column trip type varchar(100)`,
+			`alter table posts alter column name type varchar(50)`,
+			`alter table posts alter column imagename type varchar(200)`,
+			`alter table posts alter column flag type varchar(2)`,
+
+			`alter table pyu alter column id type varchar(10)`,
+
+			`alter table pyu_limit alter column board type varchar(10)`,
+
+			`alter table reports alter column board type varchar(10)`,
+			`alter table reports alter column reason type varchar(100)`,
+
+			`alter table staff alter column board type varchar(10)`,
+
+			`alter table threads alter column board type varchar(10)`,
+		)
+	},
+	func(tx *sql.Tx) (err error) {
+		err = execAll(tx,
+			`alter table threads rename column replytime to update_time`,
+			`alter table threads rename column bumptime to bump_time`,
+		)
+		if err != nil {
+			return
+		}
+		err = registerFunctions(tx, "bump_thread")
+		if err != nil {
+			return
+		}
+		return loadSQL(tx, "triggers/threads")
+	},
+	func(tx *sql.Tx) (err error) {
+		_, err = sq.Delete("main").
+			Where("id = 'geo_md5'").
+			RunWith(tx).
+			Exec()
+		return
+	},
+	func(tx *sql.Tx) (err error) {
+		return loadSQL(tx, "triggers/posts")
+	},
+	func(tx *sql.Tx) (err error) {
+		return loadSQL(tx, "triggers/posts", "triggers/mod_log")
+	},
+	func(tx *sql.Tx) (err error) {
 		_, err = tx.Exec(`alter table posts add column page int`)
 		if err != nil {
 			return
@@ -1400,43 +1490,6 @@ func setDefault(tx *sql.Tx, table, column, def string) (err error) {
 	return
 }
 
-// Register triggers and trigger functions for each board in triggers
-func registerTriggers(tx *sql.Tx, before bool, triggers map[string][]string,
-) (err error) {
-	for table, events := range triggers {
-		err = loadSQL(tx, "triggers/"+table)
-		if err != nil {
-			return
-		}
-		for _, e := range events {
-			name := fmt.Sprintf(`on_%s_%s`, table, e)
-
-			_, err = tx.Exec(fmt.Sprintf(`drop trigger if exists %s on %s`,
-				name, table))
-			if err != nil {
-				return
-			}
-
-			var mode string
-			if before {
-				mode = "before"
-			} else {
-				mode = "after"
-			}
-			_, err = tx.Exec(fmt.Sprintf(
-				`create trigger %s
-					%s %s on %s
-					for each row
-					execute procedure %s()`,
-				name, mode, e, table, name))
-			if err != nil {
-				return
-			}
-		}
-	}
-	return
-}
-
 func registerFunctions(tx *sql.Tx, files ...string) (err error) {
 	for _, f := range files {
 		err = loadSQL(tx, "functions/"+f)
@@ -1473,38 +1526,59 @@ func loadSQL(tx *sql.Tx, paths ...string) (err error) {
 	return
 }
 
-// Run migrations from version `from`to version `to`
-func runMigrations(from, to int) (err error) {
-	for i := from; i < to; i++ {
-		if !common.IsTest {
-			log.Infof("upgrading database to version %d", i+1)
-		}
+// Run migrations, till the DB version matches the code version
+func runMigrations() (err error) {
+	for {
+		var (
+			currentVersion int
+			done           bool
+		)
 		err = InTransaction(false, func(tx *sql.Tx) (err error) {
-			err = migrations[i](tx)
+			// Lock version column to ensure no migrations from other processes
+			// happen concurrently
+			err = sq.Select("val").
+				From("main").
+				Where("id = 'version'").
+				Suffix("for update").
+				RunWith(tx).
+				QueryRow().
+				Scan(&currentVersion)
+			if err != nil {
+				return
+			}
+			if currentVersion == version {
+				done = true
+				return
+			}
+			if currentVersion > version {
+				log.Fatal("database version ahead of codebase")
+			}
+
+			if !common.IsTest {
+				log.Infof("upgrading database to version %d", currentVersion+1)
+			}
+
+			err = migrations[currentVersion](tx)
 			if err != nil {
 				return
 			}
 
 			// Write new version number
-			_, err = tx.Exec(
-				`update main set val = $1 where id = 'version'`,
-				i+1,
-			)
+			_, err = sq.Update("main").
+				Set("val", currentVersion+1).
+				Where("id = 'version'").
+				RunWith(tx).
+				Exec()
 			return
 		})
 		if err != nil {
 			return fmt.Errorf("migration error: %d -> %d: %s",
-				i, i+1, err)
+				currentVersion, currentVersion+1, err)
+		}
+		if done {
+			return
 		}
 	}
-	return
-}
-
-func rollBack(tx *sql.Tx, err error) error {
-	if rbErr := tx.Rollback(); rbErr != nil {
-		err = util.WrapError(err.Error(), rbErr)
-	}
-	return err
 }
 
 // Patches server configuration during upgrades
